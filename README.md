@@ -28,7 +28,7 @@ sudo apt install docker-ce docker-ce-cli containerd.io docker-buildx-plugin dock
 mkdir -p /opt/gitlab
 ```
 ## 2.2 create docker compose file 
-> if ssh port 22, please change port in docker file or in `/etc/ssh/sshd_config`
+> If you are using SSH port 22, change it in your Dockerfile or in `/etc/ssh/sshd_config`
 ```bash
 cd /opt/gitlab
 export GITLAB_HOME=/opt/gitlab #add direcroty global 
