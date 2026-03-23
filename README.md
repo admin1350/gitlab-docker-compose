@@ -27,7 +27,7 @@ sudo apt install docker-ce docker-ce-cli containerd.io docker-buildx-plugin dock
 ```bash
 mkdir -p /opt/gitlab
 ```
-## 2.2 create docker compose file 
+## 2.2 create docker compose file and nginx
 > If you are using SSH port 22, change it in your Dockerfile or in `/etc/ssh/sshd_config`
 ```bash
 cd /opt/gitlab
@@ -56,6 +56,74 @@ services:
       - '$GITLAB_HOME/logs:/var/log/gitlab'
       - '$GITLAB_HOME/data:/var/opt/gitlab'
     shm_size: '256m'
+```
+my docker compose
+```yml
+services:
+  gitlab:
+    image: gitlab/gitlab-ee:latest
+    container_name: gitlab
+    restart: always
+    hostname: 'gitlab-nd.lord-mikrotik.ru' # Исправил опечатку gilab -> gitlab
+    environment:
+      GITLAB_OMNIBUS_CONFIG: |
+        external_url 'https://gitlab-nd.lord-mikrotik.ru'
+        # 1. Отключаем попытки GitLab самому выпустить сертификат
+        letsencrypt['enable'] = false
+        # 2. Говорим внутреннему Nginx слушать только HTTP (80 порт)
+        nginx['listen_https'] = false
+        nginx['listen_port'] = 80
+    ports:
+      # Пробрасываем только 80 порт наружу (внешний Nginx будет стучаться сюда)
+      - '80:80'
+      - '222:22'
+    volumes:
+      - './config:/etc/gitlab'
+      - './logs:/var/log/gitlab'
+      - './data:/var/opt/gitlab'
+    shm_size: '256m'
+```
+# 2.3 Nginx 
+Minimal conufig for add cert
+```nginx
+server {
+    listen 80;
+    server_name gitlab-nd.lord-mikrotik.ru;
+    return 301 https://$server_name$request_uri; # Редирект на HTTPS
+}
+```
+create link `ln -s /etc/nginx/sites-available/gitlab-nd.conf /etc/nginx/sites-enabled`
+# 2.4 add let's encrypt
+```bash
+certbot --nginx -d gitlab-nd.lord-mikrotik.ru
+```
+Congig `gitlab-nd.conf`
+```nginx
+server {
+    listen 80;
+    server_name gitlab-nd.lord-mikrotik.ru;
+    return 301 https://$server_name$request_uri; # Редирект на HTTPS
+}
+
+server {
+    listen 443 ssl;
+    server_name gitlab-nd.lord-mikrotik.ru;
+
+    # Пути к вашим SSL сертификатам (Certbot их сделает сам)
+    ssl_certificate /etc/letsencrypt/live/gitlab-nd.lord-mikrotik.ru/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/gitlab-nd.lord-mikrotik.ru/privkey.pem;
+
+    location / {
+        proxy_pass http://192.168.100.6:80; # Тот самый порт из docker-compose
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto https;
+
+        # Важно для больших пушей в Git (LFS, образы докера)
+        client_max_body_size 512m;
+    }
+}
 ```
 > To install the Community Edition, replace `ee` with `ce`.
 # 3. Up docker compose
