@@ -57,6 +57,7 @@ services:
       - '$GITLAB_HOME/data:/var/opt/gitlab'
     shm_size: '256m'
 ```
+> To install the Community Edition, replace `ee` with `ce`.
 # 3. Up docker compose
 ```bash
 docker compose up -d
