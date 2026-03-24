@@ -26,12 +26,14 @@ sudo apt install docker-ce docker-ce-cli containerd.io docker-buildx-plugin dock
 ## 2.1 create directory
 ```bash
 mkdir -p /opt/gitlab
+touch .env
+echo GITLAB_HOME=/opt/gitlab > /opt/gitlab/.env
+
 ```
 ## 2.2 create docker compose file and nginx
 > If you are using SSH port 22, change it in your Dockerfile or in `/etc/ssh/sshd_config`
 ```bash
 cd /opt/gitlab
-export GITLAB_HOME=/opt/gitlab #add direcroty global 
 nano docker-compose.yml
 ```
 `docker-compose.yml`
